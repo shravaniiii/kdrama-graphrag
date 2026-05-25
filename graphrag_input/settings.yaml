@@ -61,7 +61,8 @@ embed_text:
 extract_graph:
   model_id: default_chat_model
   prompt: prompts/extract_graph.txt
-  entity_types: [organization,person,geo,event]
+  extract_graph:
+  entity_types: [organization, person, geo, event, trope, theme, genre, relationship_type]
   max_gleanings: 1
 
 summarize_descriptions:

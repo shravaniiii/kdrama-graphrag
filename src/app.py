@@ -5,6 +5,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import requests
 import subprocess
+import hashlib
+import json
+
 
 from load_graph import download_graph_if_needed
 download_graph_if_needed()
@@ -207,8 +210,9 @@ for i, ex in enumerate(examples):
 
 def run_graphrag_query(question, method):
     env = os.environ.copy()
-    
-    root_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "graphrag_input")
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    root_path = os.path.join(project_root, "graphrag_input")
     
     result = subprocess.run(
         [
@@ -223,10 +227,9 @@ def run_graphrag_query(question, method):
         env=env
     )
     
-    # Log everything for debugging
     print("ROOT PATH:", root_path)
     print("STDOUT:", result.stdout[:500])
-    print("STDERR:", result.stderr[:500])
+    print("STDERR:", result.stderr[:200])
     print("RETURN CODE:", result.returncode)
     
     output = result.stdout
@@ -239,6 +242,11 @@ def run_graphrag_query(question, method):
         return answer
     return output.strip() or result.stderr or "No response generated"
 
+@st.cache_data(ttl=3600)
+def cached_query(question, method):
+    return run_graphrag_query(question, method)
+
+
 if st.button("Ask", use_container_width=False):
     if not question.strip():
         st.warning("Please enter a question first.")
@@ -248,7 +256,7 @@ if st.button("Ask", use_container_width=False):
 
         with st.spinner("Traversing the knowledge graph..."):
             try:
-                answer = run_graphrag_query(question, method)
+                answer = cached_query(question, method)
 
                 st.markdown(f'<div class="method-badge {badge_class}">{badge_text}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="question-display">"{question}"</div>', unsafe_allow_html=True)

@@ -62,9 +62,10 @@ graphrag query --root ./graphrag_input --method local \
 
 ## Status
 
+## Status
 - [x] Data pipeline
-- [x] GraphRAG indexing
+- [x] GraphRAG indexing  
 - [x] Query engine
-- [ ] FastAPI backend
-- [ ] Streamlit frontend
-- [ ] Deployment on Render
+- [x] FastAPI backend
+- [x] Streamlit frontend with TMDB images
+- [ ] Cloud deployment (in progress)
