@@ -207,10 +207,13 @@ for i, ex in enumerate(examples):
 
 def run_graphrag_query(question, method):
     env = os.environ.copy()
+    
+    root_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "graphrag_input")
+    
     result = subprocess.run(
         [
             "graphrag", "query",
-            "--root", "./graphrag_input",
+            "--root", root_path,
             "--method", method,
             "--query", question
         ],
@@ -219,6 +222,13 @@ def run_graphrag_query(question, method):
         timeout=180,
         env=env
     )
+    
+    # Log everything for debugging
+    print("ROOT PATH:", root_path)
+    print("STDOUT:", result.stdout[:500])
+    print("STDERR:", result.stderr[:500])
+    print("RETURN CODE:", result.returncode)
+    
     output = result.stdout
     if "SUCCESS:" in output:
         answer = output.split("SUCCESS:", 1)[1].strip()
