@@ -3,6 +3,8 @@ import requests
 import time
 import sys
 import os
+from src.load_graph import download_graph_if_needed
+download_graph_if_needed()
 
 from tmdb_helper import KNOWN_ACTORS
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
