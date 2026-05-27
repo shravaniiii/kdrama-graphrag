@@ -23,7 +23,6 @@ traversal and recommendation.
 ---
 
 ## Architecture
-## Architecture
 
 ```
 Data Layer
