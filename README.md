@@ -4,7 +4,6 @@ A knowledge graph intelligence system for Korean dramas, combining
 Microsoft GraphRAG for multi-hop reasoning with Neo4j for graph 
 traversal and recommendation.
 
-**Live demo:** [kdrama-graphrag.onrender.com](https://kdrama-graphrag.onrender.com)
 
 ---
 
