@@ -5,9 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import requests
 import subprocess
-import hashlib
-import json
-
+import pandas as pd
 
 from load_graph import download_graph_if_needed
 download_graph_if_needed()
@@ -178,60 +176,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-col1, col2 = st.columns([3, 1])
-with col1:
-    question = st.text_input(
-        "",
-        placeholder="Ask anything about K-dramas — actors, tropes, cultural impact...",
-        label_visibility="collapsed"
-    )
-with col2:
-    method = st.selectbox(
-        "",
-        ["global", "local"],
-        label_visibility="collapsed",
-        format_func=lambda x: "🌐 Global" if x == "global" else "🎯 Local"
-    )
-
-examples = [
-    "Which dramas became global hits and why?",
-    "Which actors have the most diverse roles?",
-    "What makes Squid Game different from other survival dramas?",
-    "Which dramas share the enemies-to-lovers trope?",
-    "Why did Crash Landing on You resonate globally?",
-]
-
-st.markdown("**Try asking:**")
-cols = st.columns(len(examples))
-for i, ex in enumerate(examples):
-    with cols[i]:
-        if st.button(ex[:30] + "...", key=f"ex_{i}", use_container_width=True):
-            question = ex
-
 def run_graphrag_query(question, method):
     env = os.environ.copy()
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(project_root)
     root_path = os.path.join(project_root, "graphrag_input")
-    
     result = subprocess.run(
-        [
-            "graphrag", "query",
-            "--root", root_path,
-            "--method", method,
-            "--query", question
-        ],
-        capture_output=True,
-        text=True,
-        timeout=180,
-        env=env
+        ["graphrag", "query", "--root", root_path, "--method", method, "--query", question],
+        capture_output=True, text=True, timeout=180, env=env
     )
-    
     print("ROOT PATH:", root_path)
     print("STDOUT:", result.stdout[:500])
     print("STDERR:", result.stderr[:200])
-    print("RETURN CODE:", result.returncode)
-    
     output = result.stdout
     if "SUCCESS:" in output:
         answer = output.split("SUCCESS:", 1)[1].strip()
@@ -246,48 +202,106 @@ def run_graphrag_query(question, method):
 def cached_query(question, method):
     return run_graphrag_query(question, method)
 
+tab1, tab2, tab3 = st.tabs(["🔍 Ask", "🎬 Recommend", "📊 Explore"])
 
-if st.button("Ask", use_container_width=False):
-    if not question.strip():
-        st.warning("Please enter a question first.")
-    else:
-        badge_class = "global-badge" if method == "global" else "local-badge"
-        badge_text = "GLOBAL SEARCH" if method == "global" else "LOCAL SEARCH"
+with tab1:
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        question = st.text_input(
+            "",
+            placeholder="Ask anything about K-dramas — actors, tropes, cultural impact...",
+            label_visibility="collapsed"
+        )
+    with col2:
+        method = st.selectbox(
+            "",
+            ["global", "local"],
+            label_visibility="collapsed",
+            format_func=lambda x: "🌐 Global" if x == "global" else "🎯 Local"
+        )
 
-        with st.spinner("Traversing the knowledge graph..."):
-            try:
-                answer = cached_query(question, method)
+    examples = [
+        "Which dramas became global hits and why?",
+        "Which actors have the most diverse roles?",
+        "What makes Squid Game different from other survival dramas?",
+        "Which dramas share the enemies-to-lovers trope?",
+        "Why did Crash Landing on You resonate globally?",
+    ]
 
-                st.markdown(f'<div class="method-badge {badge_class}">{badge_text}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="question-display">"{question}"</div>', unsafe_allow_html=True)
+    st.markdown("**Try asking:**")
+    cols = st.columns(len(examples))
+    for i, ex in enumerate(examples):
+        with cols[i]:
+            if st.button(ex[:30] + "...", key=f"ex_{i}", use_container_width=True):
+                question = ex
 
-                from tmdb_helper import extract_dramas_from_text, extract_actors_from_text, get_poster_url, get_actor_photo_url, KNOWN_ACTORS
+    if st.button("Ask", use_container_width=False):
+        if not question.strip():
+            st.warning("Please enter a question first.")
+        else:
+            badge_class = "global-badge" if method == "global" else "local-badge"
+            badge_text = "GLOBAL SEARCH" if method == "global" else "LOCAL SEARCH"
 
-                dramas = extract_dramas_from_text(answer)
-                show_actors = any(actor in question.lower() for actor in KNOWN_ACTORS if len(actor) > 4)
-                actors = extract_actors_from_text(answer) if show_actors else []
+            with st.spinner("Traversing the knowledge graph..."):
+                try:
+                    answer = cached_query(question, method)
+                    st.markdown(f'<div class="method-badge {badge_class}">{badge_text}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="question-display">"{question}"</div>', unsafe_allow_html=True)
 
-                left_col, right_col = st.columns([2, 1])
+                    from tmdb_helper import extract_dramas_from_text, extract_actors_from_text, get_poster_url, get_actor_photo_url, KNOWN_ACTORS
+                    dramas = extract_dramas_from_text(answer)
+                    show_actors = any(actor in question.lower() for actor in KNOWN_ACTORS if len(actor) > 4)
+                    actors = extract_actors_from_text(answer) if show_actors else []
 
-                with left_col:
-                    st.markdown(f'<div class="answer-card">{answer}</div>', unsafe_allow_html=True)
+                    left_col, right_col = st.columns([2, 1])
+                    with left_col:
+                        st.markdown(f'<div class="answer-card">{answer}</div>', unsafe_allow_html=True)
+                    with right_col:
+                        for drama in dramas[:3]:
+                            poster_url, drama_name = get_poster_url(drama)
+                            if poster_url:
+                                st.image(poster_url, caption=drama_name, use_container_width=True)
+                        for actor in actors[:2]:
+                            photo_url, actor_name = get_actor_photo_url(actor)
+                            if photo_url:
+                                st.image(photo_url, caption=actor_name, use_container_width=True)
 
-                with right_col:
-                    for drama in dramas[:3]:
-                        poster_url, drama_name = get_poster_url(drama)
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
+with tab2:
+    st.markdown("### Find Similar Dramas")
+    drama_input = st.text_input("Enter a drama name:", placeholder="e.g. Goblin, Crash Landing on You", key="drama_search")
+
+    if st.button("Find Similar", key="recommend"):
+        if drama_input.strip():
+            from neo4j_queries import get_similar_dramas
+            from tmdb_helper import get_poster_url
+            results = get_similar_dramas(drama_input.strip())
+            if results:
+                st.markdown(f"**Dramas similar to {drama_input}:**")
+                cols = st.columns(len(results))
+                for i, r in enumerate(results):
+                    with cols[i]:
+                        poster_url, _ = get_poster_url(r['title'].lower())
                         if poster_url:
-                            st.image(poster_url, caption=drama_name, use_container_width=True)
-                    for actor in actors[:2]:
-                        photo_url, actor_name = get_actor_photo_url(actor)
-                        if photo_url:
-                            st.image(photo_url, caption=actor_name, use_container_width=True)
+                            st.image(poster_url, use_container_width=True)
+                        st.markdown(f"**{r['title']}**")
+                        st.markdown(f"{r['shared_tropes']} shared tropes")
+            else:
+                st.warning("Drama not found. Try exact name like 'Goblin'")
 
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+with tab3:
+    st.markdown("### Top K-Drama Tropes")
+    from neo4j_queries import get_top_tropes
+    tropes = get_top_tropes(15)
+    if tropes:
+        df = pd.DataFrame(tropes)
+        st.bar_chart(df.set_index('trope'))
 
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 st.markdown("""
 <div style="text-align:center; color: rgba(253,246,236,0.3); font-size: 0.75rem; letter-spacing: 2px;">
-    BUILT WITH MICROSOFT GRAPHRAG · OPENAI GPT-4O-MINI · PYTHON
+    BUILT WITH MICROSOFT GRAPHRAG · OPENAI GPT-4O-MINI · PYTHON · NEO4J
 </div>
 """, unsafe_allow_html=True)
