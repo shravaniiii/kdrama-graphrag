@@ -292,6 +292,142 @@ with tab2:
                 st.warning("Drama not found. Try exact name like 'Goblin'")
 
 with tab3:
+    st.markdown("### K-Drama Knowledge Graph")
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        drama_name = st.text_input("Enter a drama to visualize:", 
+                                    placeholder="e.g. goblin, crash landing on you",
+                                    key="graph_input")
+    with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        show_graph = st.button("Visualize Graph", key="graph_btn")
+    
+    if show_graph and drama_name.strip():
+        from neo4j_queries import get_similar_dramas, get_dramas_by_trope
+        from neo4j import GraphDatabase
+        from pyvis.network import Network
+        import streamlit.components.v1 as components
+        
+        driver = GraphDatabase.driver(
+            'neo4j+s://61885e62.databases.neo4j.io',
+            auth=('61885e62', '4ltUzsQcRYiETIDh7QF-cYBYY7TxZWyr-MLxJimVI8Q')
+        )
+        
+        with driver.session() as session:
+            result = session.run("""
+                MATCH (d:Drama {name: $name})-[:HAS_TROPE]->(t:Trope)
+                RETURN d.name as drama, t.name as trope
+                LIMIT 20
+            """, name=drama_name.lower())
+            trope_rows = list(result)
+            
+            result = session.run("""
+                MATCH (a:Actor)-[:ACTED_IN]->(d:Drama {name: $name})
+                RETURN a.name as actor, d.name as drama
+                LIMIT 10
+            """, name=drama_name.lower())
+            actor_rows = list(result)
+            
+            result = session.run("""
+                MATCH (d:Drama {name: $name})-[:HAS_GENRE]->(g:Genre)
+                RETURN d.name as drama, g.name as genre
+            """, name=drama_name.lower())
+            genre_rows = list(result)
+
+        driver.close()
+
+        if trope_rows or actor_rows or genre_rows:
+            net = Network(
+                height='500px', 
+                width='100%', 
+                bgcolor='#1a0a0f', 
+                font_color='white'
+            )
+            net.barnes_hut()
+            net.set_options("""
+                    {
+                    "nodes": {
+                        "font": {
+                        "size": 14,
+                        "color": "white"
+                        },
+                        "borderWidth": 2
+                    },
+                    "edges": {
+                        "color": {
+                        "color": "rgba(255,255,255,0.3)"
+                        },
+                        "width": 1.5
+                    },
+                    "physics": {
+                        "barnesHut": {
+                        "gravitationalConstant": -8000,
+                        "springLength": 150
+                        }
+                    }
+                    }
+                    """)
+            
+            # Add drama node
+            net.add_node(
+                drama_name, 
+                label=drama_name.title(), 
+                color='#C41E3A', 
+                size=40,
+                title=f"Drama: {drama_name.title()}"
+            )
+            
+            # Add trope nodes
+            for row in trope_rows:
+                trope = row['trope']
+                net.add_node(
+                    f"t_{trope}", 
+                    label=trope, 
+                    color='#D4AF37', 
+                    size=15,
+                    title=f"Trope: {trope}"
+                )
+                net.add_edge(drama_name, f"t_{trope}")
+            
+            # Add actor nodes
+            for row in actor_rows:
+                actor = row['actor']
+                net.add_node(
+                    f"a_{actor}", 
+                    label=actor, 
+                    color='#4A90D9', 
+                    size=20,
+                    title=f"Actor: {actor}"
+                )
+                net.add_edge(f"a_{actor}", drama_name)
+            
+            # Add genre nodes
+            for row in genre_rows:
+                genre = row['genre']
+                net.add_node(
+                    f"g_{genre}", 
+                    label=genre, 
+                    color='#2ECC71', 
+                    size=18,
+                    title=f"Genre: {genre}"
+                )
+                net.add_edge(drama_name, f"g_{genre}")
+            
+            # Save and display
+            graph_path = '/tmp/kdrama_graph.html'
+            net.save_graph(graph_path)
+            
+            with open(graph_path, 'r') as f:
+                html = f.read()
+            
+            st.markdown("**Legend:** 🔴 Drama · 🟡 Tropes · 🔵 Actors · 🟢 Genres")
+            components.html(html, height=520)
+        
+        else:
+            st.warning(f"Drama '{drama_name}' not found. Try lowercase like 'goblin'")
+    
+    st.markdown("---")
     st.markdown("### Top K-Drama Tropes")
     from neo4j_queries import get_top_tropes
     tropes = get_top_tropes(15)
