@@ -23,18 +23,24 @@ traversal and recommendation.
 ---
 
 ## Architecture
+## Architecture
+
+```
 Data Layer
 ├── MDL Dataset — 1637 Korean dramas with tags, synopsis, cast
 ├── Wikipedia API — plot summaries for GraphRAG indexing
 └── TMDB API — drama posters and actor photos
+
 Knowledge Graph
 ├── Microsoft GraphRAG — 130 communities, 8 custom entity types
 ├── Neo4j AuraDB — 1839 tropes, 1817 actors, 31 genres
 └── HuggingFace Hub — graph index storage
+
 Application
 ├── FastAPI — REST backend
 ├── Streamlit — three-tab frontend (Ask, Recommend, Explore)
 └── PyVis — interactive graph visualization
+```
 
 ---
 
