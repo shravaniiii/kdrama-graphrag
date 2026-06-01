@@ -158,10 +158,10 @@ st.markdown("""
 <div class="hero">
     <div class="hero-korean">드라마 인텔리전스</div>
     <div class="hero-title">K-Drama Intelligence</div>
-    <div class="hero-sub">GraphRAG-powered reasoning across 100 top Korean dramas</div>
+    <div class="hero-sub">GraphRAG-powered reasoning across 1637 top Korean dramas</div>
     <div class="stats-row">
         <div class="stat-item">
-            <div class="stat-num">100</div>
+            <div class="stat-num">1637</div>
             <div class="stat-label">Dramas</div>
         </div>
         <div class="stat-item">
@@ -176,27 +176,17 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+@st.cache_resource(show_spinner=False)
+def load_engine():
+    project_root  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    graphrag_root = os.path.join(project_root, "graphrag_input")
+    from query_engine import init_engine
+    return init_engine(graphrag_root)
+
+
 def run_graphrag_query(question, method):
-    env = os.environ.copy()
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    os.chdir(project_root)
-    root_path = os.path.join(project_root, "graphrag_input")
-    result = subprocess.run(
-        ["graphrag", "query", "--root", root_path, "--method", method, "--query", question],
-        capture_output=True, text=True, timeout=180, env=env
-    )
-    print("ROOT PATH:", root_path)
-    print("STDOUT:", result.stdout[:500])
-    print("STDERR:", result.stderr[:200])
-    output = result.stdout
-    if "SUCCESS:" in output:
-        answer = output.split("SUCCESS:", 1)[1].strip()
-        if "Global Search Response:" in answer:
-            answer = answer.split("Global Search Response:", 1)[1].strip()
-        elif "Local Search Response:" in answer:
-            answer = answer.split("Local Search Response:", 1)[1].strip()
-        return answer
-    return output.strip() or result.stderr or "No response generated"
+    return load_engine().query_sync(question, method)
+
 
 @st.cache_data(ttl=3600)
 def cached_query(question, method):
