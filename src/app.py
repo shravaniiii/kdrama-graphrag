@@ -300,8 +300,8 @@ with tab3:
         import streamlit.components.v1 as components
         
         driver = GraphDatabase.driver(
-            'neo4j+s://61885e62.databases.neo4j.io',
-            auth=('61885e62', '4ltUzsQcRYiETIDh7QF-cYBYY7TxZWyr-MLxJimVI8Q')
+            os.getenv('NEO4J_URI', 'neo4j+s://61885e62.databases.neo4j.io'),
+            auth=('neo4j', os.getenv('NEO4J_PASSWORD', ''))
         )
         
         with driver.session() as session:
