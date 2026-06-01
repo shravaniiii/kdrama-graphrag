@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: kdrama-graphrag
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run src/app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: GRAPHRAG_API_KEY
+        sync: false
+      - key: TMDB_API_KEY
+        sync: false
+      - key: HF_TOKEN
+        sync: false
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9

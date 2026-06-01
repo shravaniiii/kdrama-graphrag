@@ -5,3 +5,10 @@ huggingface_hub==0.23.0
 python-dotenv==1.2.1
 fastapi==0.115.0
 uvicorn==0.30.0
+pandas==2.2.2
+pyarrow==16.1.0
+lancedb==0.17.0
+neo4j==6.2.0
+pyvis==0.3.2
+tiktoken==0.9.0
+openai==1.109.1
